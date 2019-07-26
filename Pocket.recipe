@@ -1,0 +1,242 @@
+#!/usr/bin/env python2
+# vim:ft=python tabstop=8 expandtab shiftwidth=4 softtabstop=4
+from calibre.web.feeds.news import BasicNewsRecipe
+from calibre.utils.config import JSONConfig
+from collections import namedtuple
+
+import json
+import mechanize
+import operator
+import time
+
+try:
+    from urllib.error import HTTPError
+except ImportError:
+    from urllib2 import HTTPError
+
+__license__ = 'GPL v3'
+__copyright__ = '2019, David Orchard'
+
+class AuthStage:
+    FirstRun = 1 
+    Authorizing = 2
+    Authorized = 3 
+
+AuthState = namedtuple('AuthState', 'stage code user')
+
+# TODO: subclass with get() and set() methods
+config = JSONConfig('custom_recipes/Pocket.json')
+
+def get_persistent_state():
+    try:
+        state_list = config["state"]
+        return AuthState(
+                stage = state_list[0],
+                code = state_list[1],
+                user = state_list[2],
+        )
+    except:
+        return AuthState(
+                stage = AuthStage.FirstRun,
+                code = None,
+                user = None,
+        )
+
+def set_persistent_state(state):
+    config["state"] = state
+
+def get_description():
+    state = get_persistent_state()
+    return '''
+        Fetches articles saved with <a href="https://getpocket.com/">Pocket</a> and archives them.<br>
+    ''' + ('''
+        Click <a href="https://getpocket.com/connected_applications">here</a> 
+        to disconnect Calibre from the Pocket account "{}".
+    '''.format(state.user) if state.user else '''
+        Run 'Fetch News' with this source scheduled to initiate authentication with Pocket.
+    ''')
+
+class Pocket(BasicNewsRecipe):
+    title = 'Pocket'
+    __author__ = 'David Orchard'
+    description = get_description()
+    publisher = 'Pocket.com'
+    category = 'info, custom, Pocket'
+
+    # User-configurable settings 
+    oldest_article = 7
+    max_articles_per_feed = 100
+    archive_downloaded = True 
+
+    # Inherited developer settings 
+    no_stylesheets = True
+    use_embedded_content = False
+    ignore_duplicate_articles = {'url'}
+
+    # Custom developer settings
+    consumer_key = '87006-2ecad30a91903f54baf0ee05'
+    redirect_uri = 'https://calibre-ebook.com/'
+    base_url = 'https://app.getpocket.com'
+    access_token = None
+    user = None
+    to_archive = []
+
+    def first_run(self, browser):
+        request = mechanize.Request("https://getpocket.com/v3/oauth/request",
+                (u'{{'
+                    '"consumer_key":"{0}",'
+                    '"redirect_uri":"{1}"'
+                '}}').format(
+                    self.consumer_key,
+                    self.redirect_uri
+                ),
+                headers = {
+                    'Content-Type': 'application/json; charset=UTF8',
+                    'X-Accept': 'application/json'
+                }
+            )
+        response = browser.open(request)
+        response = json.load(response)
+        request_token = response['code']
+        return AuthState(
+                stage = AuthStage.Authorizing, 
+                code = request_token,
+                user = None
+        )
+
+    def authorize(self, browser, request_token):
+        request = mechanize.Request("https://getpocket.com/v3/oauth/authorize",
+                (u'{{'
+                    '"consumer_key":"{0}",'
+                    '"code":"{1}"'
+                '}}').format(
+                    self.consumer_key,
+                    request_token
+                ),
+                headers = {
+                    'Content-Type': 'application/json; charset=UTF8',
+                    'X-Accept': 'application/json'
+                }
+            )
+        try:
+            response = browser.open(request)
+            response = json.load(response)
+            access_token = response["access_token"]
+            username = response["username"]
+            return AuthState(
+                    stage = AuthStage.Authorized, 
+                    code = access_token,
+                    user = username,
+            )
+        except HTTPError as e:
+            if e.code == 403:
+                # The code has already been used, or the user denied access
+                self.reauthorize()
+            raise e
+
+    def parse_index(self):
+        request = mechanize.Request("https://getpocket.com/v3/get",
+                (u'{{'
+                    '"consumer_key":"{0}",'
+                    '"access_token":"{1}",'
+                    '"count":"{2}",'
+                    '"since":"{3}",'
+                    '"state":"unread",'
+                    '"detailType":"complete",'
+                    '"contentType":"article",'
+                    '"sort":"newest"'
+                '}}').format(
+                    self.consumer_key,
+                    self.access_token,
+                    self.max_articles_per_feed,
+                    int(time.time()) - 86400 * self.oldest_article
+                ),
+                headers = {
+                    'Content-Type': 'application/json; charset=UTF8',
+                    'X-Accept': 'application/json'
+                }
+            )
+
+        try:
+            response = self.browser.open(request)
+            response = json.load(response)
+        except HTTPError as e:
+            if e.code == 401:
+                # Calibre access has been removed
+                self.reauthorize()
+            raise e
+
+        if not response['list']:
+            self.abort_recipe_processing('No unread articles in the Pocket account "{}"'.format(self.user))
+
+        if self.archive_downloaded and response['list']:
+            self.to_archive = [item['item_id'] for item in response['list'].values()]
+
+        return [('Unread', [
+            {
+                'title': item['resolved_title'],
+                'url': item['resolved_url'],
+                'date': item['time_added'],
+                'description': item['excerpt'],
+            }
+            for item in response['list'].values()
+        ] if response['list'] else [])]
+
+    def show_user_auth_prompt(self, request_token):
+            self.abort_recipe_processing('''
+                Calibre must be granted access to your Pocket account. Please click 
+                <a href="https://getpocket.com/auth/authorize?request_token={0}&redirect_uri={1}">here</a>
+                to authenticate via a browser, and then re-fetch the news.
+            '''.format(request_token, self.redirect_uri))
+
+    def reauthorize(self):
+        self.set_persistent_state(None)
+        self.ensure_authorization(self.browser)
+
+    def ensure_authorization(self, browser):
+        state = get_persistent_state()
+        if state.stage is AuthStage.FirstRun:
+            state = self.first_run(browser)
+            set_persistent_state(state)
+            self.show_user_auth_prompt(state.code)
+        elif state.stage is AuthStage.Authorizing:
+            state = self.authorize(browser, state.code)
+            set_persistent_state(state)
+
+        self.access_token = state.code
+        self.user = state.user
+
+    def get_browser(self, *args, **kwargs):
+        browser = BasicNewsRecipe.get_browser(self)
+        self.ensure_authorization(browser)
+        return browser
+
+    def archive(self):
+        if not self.to_archive:
+            return
+
+        archived_time = int(time.time())
+        request = mechanize.Request("https://getpocket.com/v3/send",
+                (u'{{'
+                    '"consumer_key":"{0}",'
+                    '"access_token":"{1}",'
+                    '"actions":{2}'
+                '}}').format(
+                    self.consumer_key,
+                    self.access_token,
+                    json.dumps([{
+                        'action': 'archive',
+                        'item_id': item_id,
+                        'time': archived_time,
+                    } for item_id in self.to_archive])
+                ),
+                headers = {
+                    'Content-Type': 'application/json; charset=UTF8',
+                    'X-Accept': 'application/json'
+                }
+            )
+        response = self.browser.open(request)
+
+    def cleanup(self):
+        enable_logging(self.browser)
+        self.archive()
