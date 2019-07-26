@@ -8,12 +8,15 @@ class PocketRSS(BasicNewsRecipe):
     __author__ = 'David Orchard'
     description = 'Fetches private RSS feeds from getpocket.com'
 
+    # User-configurable options
     oldest_article = 7
     max_articles_per_feed = 100
-    auto_cleanup = True
-    needs_subscription = True
+    # Possibile feeds: [ 'Unread', 'Read', 'All']
     feeds = ['Unread']
 
+    # Developer options
+    auto_cleanup = True
+    needs_subscription = True
     base_url = 'https://getpocket.com'
 
     def get_rss_tuple(self, feed_name):
@@ -24,7 +27,6 @@ class PocketRSS(BasicNewsRecipe):
         self.feeds = list(map(self.get_rss_tuple, self.feeds)) 
 
     def get_browser(self, *args, **kwargs):
-        self.resolve_feeds()
         br = BasicNewsRecipe.get_browser(self)
         if self.username is None or self.password is None:
             # Currently (3.44.0) calibre fails silently when a username/password is missing, but this branch should stay
@@ -32,6 +34,7 @@ class PocketRSS(BasicNewsRecipe):
             self.abort_recipe_processing("Please enter a username and password under Fetch news > Schedule news download")
 
         # Authenticate with each feed
+        self.resolve_feeds()
         for feed in self.feeds:
             br.add_password(feed[1], self.username, self.password)
 
