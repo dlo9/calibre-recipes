@@ -182,13 +182,6 @@ class Pocket(BasicNewsRecipe):
             for item in response['list'].values()
         ] if response['list'] else [])]
 
-    def show_user_auth_prompt(self, request_token):
-            self.abort_recipe_processing('''
-                Calibre must be granted access to your Pocket account. Please click 
-                <a href="https://getpocket.com/auth/authorize?request_token={0}&redirect_uri={1}">here</a>
-                to authenticate via a browser, and then re-fetch the news.
-            '''.format(request_token, self.redirect_uri))
-
     def reauthorize(self):
         set_persistent_state(None)
         self.ensure_authorization(self.browser)
@@ -198,7 +191,11 @@ class Pocket(BasicNewsRecipe):
         if state.stage is AuthStage.FirstRun:
             state = self.first_run(browser)
             set_persistent_state(state)
-            self.show_user_auth_prompt(state.code)
+            self.abort_recipe_processing('''
+                Calibre must be granted access to your Pocket account. Please click 
+                <a href="https://getpocket.com/auth/authorize?request_token={0}&redirect_uri={1}">here</a>
+                to authenticate via a browser, and then re-fetch the news.
+            '''.format(request_token, self.redirect_uri))
         elif state.stage is AuthStage.Authorizing:
             state = self.authorize(browser, state.code)
             set_persistent_state(state)
