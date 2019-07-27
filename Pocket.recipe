@@ -190,7 +190,7 @@ class Pocket(BasicNewsRecipe):
             '''.format(request_token, self.redirect_uri))
 
     def reauthorize(self):
-        self.set_persistent_state(None)
+        set_persistent_state(None)
         self.ensure_authorization(self.browser)
 
     def ensure_authorization(self, browser):
