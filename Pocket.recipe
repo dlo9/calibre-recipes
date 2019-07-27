@@ -5,6 +5,7 @@ from calibre.utils.config import JSONConfig
 from calibre.web.feeds.news import BasicNewsRecipe
 from collections import namedtuple
 
+import errno
 import json
 import mechanize
 import operator
