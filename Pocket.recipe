@@ -18,9 +18,9 @@ __license__ = 'GPL v3'
 __copyright__ = '2019, David Orchard'
 
 class AuthStage:
-    FirstRun = 1 
+    FirstRun = 1
     Authorizing = 2
-    Authorized = 3 
+    Authorized = 3
 
 AuthState = namedtuple('AuthState', 'stage code user')
 
@@ -50,7 +50,7 @@ def get_description():
     return '''
         Fetches articles saved with <a href="https://getpocket.com/">Pocket</a> and archives them.<br>
     ''' + ('''
-        Click <a href="https://getpocket.com/connected_applications">here</a> 
+        Click <a href="https://getpocket.com/connected_applications">here</a>
         to disconnect Calibre from the Pocket account "{}".
     '''.format(state.user) if state.user else '''
         Run 'Fetch News' with this source scheduled to initiate authentication with Pocket.
@@ -63,12 +63,12 @@ class Pocket(BasicNewsRecipe):
     publisher = 'Pocket.com'
     category = 'info, custom, Pocket'
 
-    # User-configurable settings 
+    # User-configurable settings
     oldest_article = 7
     max_articles_per_feed = 100
-    archive_downloaded = True 
+    archive_downloaded = True
 
-    # Inherited developer settings 
+    # Inherited developer settings
     no_stylesheets = True
     use_embedded_content = False
     ignore_duplicate_articles = {'url'}
@@ -99,7 +99,7 @@ class Pocket(BasicNewsRecipe):
         response = json.load(response)
         request_token = response['code']
         return AuthState(
-                stage = AuthStage.Authorizing, 
+                stage = AuthStage.Authorizing,
                 code = request_token,
                 user = None
         )
@@ -124,7 +124,7 @@ class Pocket(BasicNewsRecipe):
             access_token = response["access_token"]
             username = response["username"]
             return AuthState(
-                    stage = AuthStage.Authorized, 
+                    stage = AuthStage.Authorized,
                     code = access_token,
                     user = username,
             )
@@ -192,7 +192,7 @@ class Pocket(BasicNewsRecipe):
             state = self.first_run(browser)
             set_persistent_state(state)
             self.abort_recipe_processing('''
-                Calibre must be granted access to your Pocket account. Please click 
+                Calibre must be granted access to your Pocket account. Please click
                 <a href="https://getpocket.com/auth/authorize?request_token={0}&redirect_uri={1}">here</a>
                 to authenticate via a browser, and then re-fetch the news.
             '''.format(request_token, self.redirect_uri))
