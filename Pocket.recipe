@@ -152,7 +152,6 @@ class Pocket(BasicNewsRecipe):
                     '"since":"{3}",'
                     '"state":"unread",'
                     '"detailType":"complete",'
-                    '"contentType":"article",'
                     '"sort":"newest"'
                 '}}').format(
                     self.consumer_key,
