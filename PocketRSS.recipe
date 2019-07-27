@@ -11,7 +11,7 @@ class PocketRSS(BasicNewsRecipe):
     # User-configurable options
     oldest_article = 7
     max_articles_per_feed = 100
-    # Possibile feeds: [ 'Unread', 'Read', 'All']
+    # Possible feeds: [ 'Unread', 'Read', 'All']
     feeds = ['Unread']
 
     # Developer options
