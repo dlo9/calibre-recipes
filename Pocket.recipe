@@ -187,7 +187,7 @@ class Pocket(BasicNewsRecipe):
                 'date': item['time_added'],
                 'description': item['excerpt'],
             }
-            for item in response['list'].values()
+            for item in sorted(response['list'].values(), key = lambda x: x['sort_id'])
         ] if response['list'] else [])]
 
     def reauthorize(self):
