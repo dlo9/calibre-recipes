@@ -77,6 +77,7 @@ class Pocket(BasicNewsRecipe):
     oldest_article = 7
     max_articles_per_feed = 100
     archive_downloaded = True
+    series_name = 'Pocket'
 
     # Inherited developer settings
     auto_cleanup = True
@@ -246,3 +247,7 @@ class Pocket(BasicNewsRecipe):
         # (e.g. reauthorization needed) so there is no archiving to do
         if self.config.state == PocketConfig.AuthState.Authorized:
             self.archive()
+
+    # TODO: This works with EPUB, but not mobi/azw3
+    def postprocess_book(self, oeb, opts, log):
+        oeb.metadata.add('series', self.series_name)
