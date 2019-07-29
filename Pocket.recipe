@@ -4,12 +4,12 @@ from calibre.constants import config_dir
 from calibre.utils.config import JSONConfig
 from calibre.web.feeds.news import BasicNewsRecipe
 from collections import namedtuple
+from time import localtime, strftime, time
 
 import errno
 import json
 import mechanize
 import operator
-import time
 
 try:
     from urllib.error import HTTPError
@@ -60,7 +60,7 @@ class PocketConfig:
 class Pocket(BasicNewsRecipe):
     config = PocketConfig.from_file()
 
-    title = 'Pocket'
+    title = strftime('Pocket [%a, %d %b %Y]', localtime())
     __author__ = 'David Orchard'
     description = '''
         Fetches articles saved with <a href="https://getpocket.com/">Pocket</a> and archives them.<br>
@@ -157,7 +157,7 @@ class Pocket(BasicNewsRecipe):
                     self.consumer_key,
                     self.config.token,
                     self.max_articles_per_feed,
-                    int(time.time()) - 86400 * self.oldest_article
+                    int(time()) - 86400 * self.oldest_article
                 ),
                 headers = {
                     'Content-Type': 'application/json; charset=UTF8',
@@ -219,7 +219,7 @@ class Pocket(BasicNewsRecipe):
         if not self.to_archive:
             return
 
-        archived_time = int(time.time())
+        archived_time = int(time())
         request = mechanize.Request("https://getpocket.com/v3/send",
                 (u'{{'
                     '"consumer_key":"{0}",'
