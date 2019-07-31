@@ -4,6 +4,7 @@ from calibre.constants import config_dir
 from calibre.utils.config import JSONConfig
 from calibre.web.feeds.news import BasicNewsRecipe
 from collections import namedtuple
+from os import path
 from time import localtime, strftime, time
 
 import errno
@@ -20,7 +21,7 @@ __license__ = 'GPL v3'
 __copyright__ = '2019, David Orchard'
 
 class PocketConfig:
-    __file_path = config_dir + '/custom_recipes/Pocket.json'
+    __file_path = path.join(config_dir, 'custom_recipes', 'Pocket.json')
 
     class AuthState:
         FirstRun = 1
