@@ -249,5 +249,6 @@ class Pocket(BasicNewsRecipe):
             self.archive()
 
     # TODO: This works with EPUB, but not mobi/azw3
+    # BUG: https://bugs.launchpad.net/calibre/+bug/1838486
     def postprocess_book(self, oeb, opts, log):
         oeb.metadata.add('series', self.series_name)
