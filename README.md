@@ -1,4 +1,4 @@
-# cablire-recipes
+# calibre-recipes
 
 A set of custom recipes for automatic news fetching in [Calibre](https://calibre-ebook.com)
 
