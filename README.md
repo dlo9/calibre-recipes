@@ -1,3 +1,6 @@
+# UNMAINTAINED
+At this time, I'm not actively maintaining this repo. I suggest [this](https://github.com/mmagnus/Pocket-Plus-Calibre-Plugin/issues/9) repo instead, which has a more up-to-date version of this code.
+
 # calibre-recipes
 
 A set of custom recipes for automatic news fetching in [Calibre](https://calibre-ebook.com)
